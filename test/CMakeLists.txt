@@ -1,0 +1,14 @@
+project(FastaCompressTest)
+
+include_directories(${FastaCompressor_SOURCE_DIR})
+
+LIST(APPEND test_files test_file_buffer.c test_string_utils.c test_bloom_filter.c)
+
+foreach(test_file ${test_files})
+    get_filename_component(test_name ${test_file} NAME_WE)
+    message(${test_name})
+    add_executable(${test_name} ${test_file})
+    target_link_libraries(${test_name} libfasta unity)
+
+    add_test(NAME ${test_name} COMMAND ${test_name})
+endforeach()
