@@ -1,7 +1,7 @@
 project(FastaCompressor)
 
 LIST(APPEND source_files 
-    bloom_filter.c file_buffer.c
+    bloom_filter.c de_bruijn_graph.c fasta.c file_buffer.c
     murmur3.c string_utils.c utils.c vector.c)
 
 add_library(libfasta STATIC ${source_files})
