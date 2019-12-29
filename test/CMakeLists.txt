@@ -3,7 +3,8 @@ project(FastaCompressTest)
 include_directories(${FastaCompressor_SOURCE_DIR})
 
 LIST(APPEND test_files 
-test_bloom_filter.c test_file_buffer.c test_string_utils.c test_vector.c)
+    test_bloom_filter.c test_file_buffer.c test_string_utils.c 
+    test_utils.c test_vector.c)
 
 foreach(test_file ${test_files})
     get_filename_component(test_name ${test_file} NAME_WE)

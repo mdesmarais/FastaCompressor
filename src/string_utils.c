@@ -15,10 +15,10 @@ void reverseComplement(char *input, size_t len) {
                 input[i] = 'A';
                 break;
             case 'C':
-                input[i] = 'C';
+                input[i] = 'G';
                 break;
             case 'G':
-                input[i] = 'G';
+                input[i] = 'C';
                 break;
             default:
                 break;
