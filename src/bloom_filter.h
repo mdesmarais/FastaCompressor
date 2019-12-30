@@ -1,24 +1,27 @@
 #ifndef BLOOM_FILTER_H
 #define BLOOM_FILTER_H
+
 #include <stdbool.h>
-#include <stddef.h>
+#include <stdint.h>
 
 typedef struct BloomFilter {
-    char *data;
-    size_t size;
-    int nbhashs;
+    int8_t *data;
+    int64_t size;
+    int8_t nbhashs;
 } BloomFilter;
 
-BloomFilter *bfCreate(size_t n, int k);
+BloomFilter *bfCreate(int64_t n, int8_t k);
 void bfDelete(BloomFilter *bf);
 
-char bfGetBit(BloomFilter *bf, size_t i, int *pError);
-bool bfSetBit(BloomFilter *bf, size_t i);
+void bfFill(BloomFilter *bf, int8_t *bits);
+
+char bfGetBit(BloomFilter *bf, int64_t i, int *pError);
+bool bfSetBit(BloomFilter *bf, int64_t i);
 
 bool bfAdd(BloomFilter *bf, void *value, int len);
 bool bfContains(BloomFilter *bf, void *value, int len);
 
-size_t bfSize(const BloomFilter *bf);
+int64_t bfSize(const BloomFilter *bf);
 int bfNbHashs(const BloomFilter *bf);
 
 #endif // BLOOM_FILTER_H
