@@ -13,6 +13,7 @@ typedef struct Vector {
 
 Vector *vectorCreate(size_t initialCapacity, size_t elemSize);
 void vectorDelete(Vector *v);
+void vectorClear(Vector *v);
 
 bool vectorResize(Vector *v, size_t newCapacity);
 
@@ -21,5 +22,6 @@ void *vectorAt(Vector *v, size_t i);
 
 size_t vectorCapacity(const Vector *v);
 size_t vectorSize(const Vector *v);
+void *vectorRawValues(const Vector *v);
 
 #endif // VECTOR_H

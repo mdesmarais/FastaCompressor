@@ -33,6 +33,12 @@ void vectorDelete(Vector *v) {
     }
 }
 
+void vectorClear(Vector *v) {
+    assert(v);
+
+    v->size = 0;
+}
+
 bool vectorResize(Vector *v, size_t newCapacity) {
     assert(v);
 
@@ -97,4 +103,10 @@ size_t vectorSize(const Vector *v) {
     assert(v);
 
     return v->size;
+}
+
+void *vectorRawValues(const Vector *v) {
+    assert(v);
+
+    return v->values;
 }
