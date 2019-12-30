@@ -1,10 +1,11 @@
 #include "bloom_filter.h"
 
+#include "log.h"
+#include "murmur3.h"
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "murmur3.h"
 
 static char *getByte(BloomFilter *bf, size_t i) {
     assert(bf);
@@ -141,7 +142,14 @@ bool bfContains(BloomFilter *bf, void *value, int len) {
 
         size_t pos = getPositionFromHash(hash, 4, size);
 
-        if (error != 0 || !bfGetBit(bf, pos, &error)) {
+        char b = bfGetBit(bf, pos, &error);
+
+        if (error != 0) {
+            log_error("bfContains : Error while trying to get a bit value %d", error);
+            return false;
+        }
+
+        if (!b) {
             return false;
         }
     }
