@@ -6,3 +6,5 @@ LIST(APPEND source_files
 
 add_library(libfasta STATIC ${source_files})
 set_target_properties(libfasta PROPERTIES ARCHIVE_OUTPUT_NAME "${PREFIX}fasta${SUFFIX}")
+
+add_executable(fasta_compress ${source_files} compress.c)

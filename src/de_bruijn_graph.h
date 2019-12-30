@@ -6,7 +6,7 @@
 
 struct BloomFilter;
 
-void createDBG(struct BloomFilter *bf, FILE *fp, int k);
+bool createDBG(struct BloomFilter *bf, FILE *fp, int k);
 
 struct BloomFilter *loadDBG(FILE *fp);
 bool saveDBG(struct BloomFilter *bf, FILE *fp);

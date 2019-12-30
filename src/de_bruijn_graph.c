@@ -10,33 +10,48 @@
 #include <stdlib.h>
 #include <string.h>
 
-void createDBG(BloomFilter *bf, FILE *fp, int k) {
+bool createDBG(BloomFilter *bf, FILE *fp, int k) {
     assert(bf);
     assert(fp);
+
+    // A kmer must have a positive length
+    if (k <= 0) {
+        return false;
+    }
 
     char *line = NULL;
     size_t length = 0;
 
     ssize_t result;
     while ((result = getline(&line, &length, fp)) > 0) {
+        // Skips headers
         if (*line == '>') {
             continue;
         }
 
-        for (size_t i = 0;i < length - k + 1;i++) {
-            if (!bfAdd(bf, line + i, k)) {
-
+        // Inserts each kmer into the filter
+        for (int64_t i = 0;i < length - k + 1;i++) {
+            // Each kmer starts at position i and has
+            // a length of k. 
+            // The line must be greater than k
+            if (k > result || !bfAdd(bf, line + i, k)) {
+                free(line);
+                return false;
             }
         }
     }
 
-    if (result < 0) {
-        perror("somethink bad happened");
-        return;
+    free(line);
+
+    if (!feof(fp) && result < 0) {
+        perror("something bad happened");
+        return false;
     }
+
+    return true;
 }
 
-struct BloomFilter *loadDBG(FILE *fp) {
+BloomFilter *loadDBG(FILE *fp) {
     assert(fp);
 
     int64_t size = 0;
