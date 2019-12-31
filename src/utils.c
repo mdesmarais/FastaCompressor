@@ -4,6 +4,7 @@
 #include "string_utils.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,6 +33,19 @@ char *canonicalForm(char *kmer, size_t len) {
     free(rc);
 
     return kmer;
+}
+
+const char *gzFileError(gzFile fp) {
+    assert(fp);
+
+    int errnum;
+    const char *str = gzerror(fp, &errnum);
+
+    if (errnum == Z_ERRNO) {
+        return strerror(errno);
+    }
+
+    return str;
 }
 
 int findNeighbors(BloomFilter *bf, const char *kmer, size_t len, char *neighbors) {

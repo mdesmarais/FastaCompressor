@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 
+#include <zlib.h>
+
 struct BloomFilter;
 
 /**
@@ -18,6 +20,8 @@ struct BloomFilter;
  * @return a pointer to the canonical form
  */
 char *canonicalForm(char *kmer, size_t len);
+
+const char *gzFileError(gzFile fp);
 
 /**
  * \brief Finds neighbors of the given kmer that are in the bloom filter
