@@ -68,7 +68,7 @@ int findNeighbors(BloomFilter *bf, const char *kmer, size_t len, char *neighbors
     char letters[] = { 'A', 'T', 'C', 'G' };
 
     for (int i = 0;i < 4;i++) {
-        // Copies the last 3 letters of the kmer
+        // Copies the last n letters of the kmer, where n = len - 1
         memcpy(nextKmer, kmer + 1, len - 1);
 
         // Adds the final letter

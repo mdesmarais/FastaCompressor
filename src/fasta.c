@@ -60,6 +60,82 @@ bool compressFile(BloomFilter *bf, FILE *in, FILE *out, int k) {
     return true;
 }
 
+bool decompressRead(BloomFilter *bf, Vector *branchings, char *read, int readLength, const char *firstKmer, int k) {
+    assert(bf);
+    assert(branchings);
+    assert(read);
+    assert(firstKmer);
+
+    if (readLength <= 0 || k <= 0) {
+        return false;
+    }
+
+    char *kmer = malloc(k);
+    bool result = false;
+
+    if (!kmer) {
+        log_error("Allocation failed");
+        return false;
+    }
+
+    memcpy(kmer, firstKmer, k);
+    memcpy(read, kmer, k);
+
+    char neighbors[4];
+    int nextBranching = 0;
+
+    for (int i = 0;i < readLength - k;i++) {
+        int nbNeighbors = findNeighbors(bf, kmer, k, neighbors);
+        int neighborIndex = -1;
+
+        if (nbNeighbors > 1) {
+            char *pBranching = vectorAt(branchings, nextBranching);
+
+            if (!pBranching) {
+                log_error("Unable to get branching at index %d", nextBranching);
+                goto EXIT;
+            }
+
+            // Checks if the current branching corresponds to one of the kmer neighbors
+            for (int j = 0;j < nbNeighbors && neighborIndex == -1;j++) {
+                if (*pBranching == neighbors[j]) {
+                    neighborIndex = 0;
+                }
+            }
+
+            if (neighborIndex == -1) {
+                log_error("Branching error");
+                return false;
+            }
+
+            nextBranching++;
+        }
+        else if (nbNeighbors == 1) {
+            neighborIndex = 0;
+        }
+        else if (i == readLength - k) {
+            // It was the last kmer
+            break;
+        }
+        else {
+            // Error
+            log_error("Kmer without neighbors at %d", i);
+            goto EXIT;
+        }
+
+        memcpy(kmer, kmer + 1, k - 1);
+        kmer[k - 1] = neighbors[neighborIndex];
+        read[i + k] = neighbors[neighborIndex];
+    }
+
+    result = true;
+
+EXIT:
+    free(kmer);
+
+    return result;
+}
+
 bool computeBranchings(BloomFilter *bf, Vector *v, char *seq, size_t len, int k) {
     assert(bf);
     assert(v);
@@ -73,7 +149,6 @@ bool computeBranchings(BloomFilter *bf, Vector *v, char *seq, size_t len, int k)
 
     for (size_t i = 0;i < len - k + 1;i++) {
         int nbNeighbors = findNeighbors(bf, seq + i, k, neighbors);
-        //log_info("Neighbors : %d", nbNeighbors);
 
         if (nbNeighbors < 0) {
             return false;

@@ -41,7 +41,7 @@ void setUp() {
 void tearDown() {
     bfDelete(g_bf);
     gzclose(g_fp);
-    //remove("test_dbg.dat");
+    remove("test_dbg.dat");
 }
 
 void test_loadDBG_Should_ReturnNull_When_GivenEmptyFile() {
@@ -101,10 +101,33 @@ void test_loadDBG_saveDBG() {
     }
 }
 
+void test_insertKmer_Should_ReturnFalse_When_GivenNegativeK() {
+    g_bf = bfCreate(10000, 3);
+    TEST_ASSERT_NOT_NULL(g_bf);
+
+    char kmer[] = "ATCG";
+    TEST_ASSERT_FALSE(insertKmer(g_bf, kmer, 0));
+    TEST_ASSERT_FALSE(insertKmer(g_bf, kmer, -1));
+}
+
+void test_insertKmer_Should_ReturnTrue_And_UpdateBfWithCorrectKmer() {
+    g_bf = bfCreate(10000, 3);
+    TEST_ASSERT_NOT_NULL(g_bf);
+
+    char kmer[] = "CGTACGT";
+    TEST_ASSERT_TRUE(insertKmer(g_bf, kmer, 7));
+
+    TEST_ASSERT_FALSE(bfContains(g_bf, "CGTACGT", 7));
+    TEST_ASSERT_TRUE(bfContains(g_bf, "ACGTACG", 7));
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_loadDBG_Should_ReturnNull_When_GivenEmptyFile);
     RUN_TEST(test_loadDBG_Should_ReturnNull_When_MissingData);
     RUN_TEST(test_loadDBG_saveDBG);
+
+    RUN_TEST(test_insertKmer_Should_ReturnFalse_When_GivenNegativeK);
+    RUN_TEST(test_insertKmer_Should_ReturnTrue_And_UpdateBfWithCorrectKmer);
     return UNITY_END();
 }

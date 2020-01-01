@@ -10,6 +10,7 @@
 #include "bloom_filter.h"
 #include "getline.h"
 #include "log.h"
+#include "string_utils.h"
 #include "utils.h"
 
 bool createDBG(BloomFilter *bf, FILE *fp, int k) {
@@ -24,11 +25,23 @@ bool createDBG(BloomFilter *bf, FILE *fp, int k) {
     char *line = NULL;
     size_t length = 0;
 
-    ssize_t result;
-    while ((result = getline(&line, &length, fp)) > 0) {
+    char *kmer = malloc(k);
+
+    if (!kmer) {
+        return false;
+    }
+
+    bool result = false;
+
+    ssize_t lineLength;
+    while ((lineLength = getline(&line, &length, fp)) > 0) {
         // Skips headers
         if (*line == '>') {
             continue;
+        }
+
+        if (k > lineLength) {
+            goto EXIT;
         }
 
         // Inserts each kmer into the filter
@@ -36,21 +49,41 @@ bool createDBG(BloomFilter *bf, FILE *fp, int k) {
             // Each kmer starts at position i and has
             // a length of k. 
             // The line must be greater than k
-            if (k > result || !bfAdd(bf, line + i, k)) {
-                free(line);
-                return false;
+
+            memcpy(kmer, line + i, k);
+            if (!insertKmer(bf, kmer, k)) {
+                log_error("Unable to insert kmer %.*s", k, kmer);
+                goto EXIT;
             }
         }
     }
 
-    free(line);
-
-    if (!feof(fp) && result < 0) {
+    if (!feof(fp) && lineLength < 0) {
         perror("something bad happened");
+    }
+    else {
+        result = true;
+    }
+
+EXIT:
+    free(kmer);
+    free(line);
+    return result;
+}
+
+bool insertKmer(struct BloomFilter *bf, char *kmer, int k) {
+    assert(bf);
+    assert(kmer);
+
+    if (k <= 0) {
         return false;
     }
 
-    return true;
+    if (!canonicalForm(kmer, k)) {
+        return false;
+    }
+
+    return bfAdd(bf, kmer, k);
 }
 
 BloomFilter *loadDBG(gzFile fp) {
