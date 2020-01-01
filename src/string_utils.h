@@ -2,6 +2,30 @@
 #define STRING_UTILS_H
 
 #include <stddef.h>
+#include <stdint.h>
+
+int8_t atoi8(const char *input);
+
+int64_t atoi64(const char *input);
+
+/**
+ * \brief Replaces the file path extension with the given one
+ * 
+ * This function returns 0 if the path length is 0 or if its length
+ * is greather than the buffer capacity.
+ * 
+ * If the given path does not end with an extension, then the new extension will be added.
+ * If the given path ends with several extensions, then only the last one will be changed.
+ * 
+ * @param path path where the given extension should be added
+ * @param pathLength length of the given path
+ * @param ext extension to add (without the dot)
+ * @param extLength length of the extension to add, must be positive
+ * @param buffer to store the new path
+ * @param bufferLength length of the buffer
+ * @return size of the new path
+ */
+size_t pathExtension(const char *path, size_t pathLength, const char *ext, size_t extLength, char *buffer, size_t bufferLength);
 
 /**
  * \brief Computes the reverse complement of a given string

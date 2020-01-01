@@ -1,16 +1,16 @@
 #include "de_bruijn_graph.h"
 
-#include "bloom_filter.h"
-#include "getline.h"
-#include "log.h"
-#include "utils.h"
-
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <zlib.h>
+
+#include "bloom_filter.h"
+#include "getline.h"
+#include "log.h"
+#include "utils.h"
 
 bool createDBG(BloomFilter *bf, FILE *fp, int k) {
     assert(bf);
