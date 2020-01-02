@@ -10,6 +10,9 @@ struct Vector;
 
 bool compressFile(struct BloomFilter *bf, FILE *in, FILE *out, int k);
 bool computeBranchings(struct BloomFilter *bf, struct Vector *v, char *seq, size_t len, int k);
+bool decompressFile(struct BloomFilter *bf, FILE *in, FILE *out, int k);
 bool decompressRead(struct BloomFilter *bf, struct Vector *branchings, char *read, int readLength, const char *firstKmer, int k);
+
+int extractBranchings(struct Vector *branchings, const char *line);
 
 #endif // FASTA_H

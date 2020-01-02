@@ -60,6 +60,122 @@ bool compressFile(BloomFilter *bf, FILE *in, FILE *out, int k) {
     return true;
 }
 
+bool computeBranchings(BloomFilter *bf, Vector *v, char *seq, size_t len, int k) {
+    assert(bf);
+    assert(v);
+    assert(seq);
+
+    if (k <= 0) {
+        return false;
+    }
+
+    char neighbors[4];
+
+    for (size_t i = 0;i < len - k + 1;i++) {
+        int nbNeighbors = findNeighbors(bf, seq + i, k, neighbors);
+
+        if (nbNeighbors < 0) {
+            return false;
+        }
+
+        if (nbNeighbors == 0) {
+            break;
+        }
+        else if (nbNeighbors > 1) {
+            vectorPush(v, seq + i + k + 1);
+        }
+    }
+
+    return true;
+}
+
+bool decompressFile(BloomFilter *bf, FILE *in, FILE *out, int k) {
+    assert(bf);
+    assert(in);
+    assert(out);
+
+    if (k <= 0) {
+        return false;
+    }
+
+    bool result = false;
+    char *line = NULL;
+    size_t size = 0;
+    char *read = NULL;
+    Vector *branchings = NULL;
+
+    ssize_t lineLength = getline(&line, &size, in);
+
+    if (lineLength <= 0) {
+        log_error("Unable to read the length of each read");
+        goto EXIT;
+    }
+
+    int readLength = 0;
+
+    if (sscanf(line, "%d", &readLength) != 1) {
+        log_error("Unable to extract the length of each read");
+        goto EXIT;
+    }
+
+    if (readLength <= 0) {
+        log_error("Invalid read length %d", readLength);
+        goto EXIT;
+    }
+
+    log_debug("Read length : %d", readLength);
+
+    read = malloc(readLength + 2);
+    branchings = vectorCreate(readLength - k, 1);
+
+    if (!read) {
+        log_error("Allocation error");
+        goto EXIT;
+    }
+
+    if (!branchings) {
+        log_error("Unable to create a new vector");
+        goto EXIT;
+    }
+
+    read[readLength] = '\n';
+    read[readLength + 1] = '\0';
+
+    while ((lineLength = getline(&line, &size, in)) > 0) {
+        vectorClear(branchings);
+
+        int nbBranchings;
+        if ((nbBranchings = extractBranchings(branchings, line)) < 0) {
+            log_error("Unable to extract branchings");
+            goto EXIT;
+        }
+
+        log_debug("nb branchings=%d", nbBranchings);
+
+        if (nbBranchings > 0) {
+            log_debug("First branching : %c", *((char*) vectorAt(branchings, 0)));
+        }
+
+        // @TODO check that the read length equals k
+
+        if (!decompressRead(bf, branchings, read, readLength, line, k)) {
+            log_error("Decompression error");
+            goto EXIT;
+        }
+
+        fwrite(read, readLength + 1, 1, out);
+    }
+
+    result = true;
+
+EXIT:
+    free(line);
+    free(read);
+    vectorDelete(branchings);
+
+    return result;
+}
+
 bool decompressRead(BloomFilter *bf, Vector *branchings, char *read, int readLength, const char *firstKmer, int k) {
     assert(bf);
     assert(branchings);
@@ -89,6 +205,7 @@ bool decompressRead(BloomFilter *bf, Vector *branchings, char *read, int readLen
         int neighborIndex = -1;
 
         if (nbNeighbors > 1) {
+            log_debug("neighbors : %d for kmer %.*s", nbNeighbors, k, kmer);
             char *pBranching = vectorAt(branchings, nextBranching);
 
             if (!pBranching) {
@@ -104,7 +221,7 @@ bool decompressRead(BloomFilter *bf, Vector *branchings, char *read, int readLen
             }
 
             if (neighborIndex == -1) {
-                log_error("Branching error");
+                log_error("Branching error, index=%ld", i);
                 return false;
             }
 
@@ -136,31 +253,25 @@ EXIT:
     return result;
 }
 
-bool computeBranchings(BloomFilter *bf, Vector *v, char *seq, size_t len, int k) {
-    assert(bf);
-    assert(v);
-    assert(seq);
+int extractBranchings(Vector *branchings, const char *line) {
+    assert(branchings);
+    assert(line);
 
-    if (k <= 0) {
-        return false;
+    char *seqEnd = strchr(line, ' ');
+
+    if (!seqEnd) {
+        return 0;
     }
 
-    char neighbors[4];
-
-    for (size_t i = 0;i < len - k + 1;i++) {
-        int nbNeighbors = findNeighbors(bf, seq + i, k, neighbors);
-
-        if (nbNeighbors < 0) {
-            return false;
+    char *nextBranching = seqEnd + 1;
+    while (*nextBranching != '\0' && *nextBranching != '\n') {
+        if (!vectorPush(branchings, nextBranching)) {
+            log_error("Unable to push a new branching into the vector");
+            return -1;
         }
 
-        if (nbNeighbors == 0) {
-            break;
-        }
-        else if (nbNeighbors > 1) {
-            vectorPush(v, seq + i);
-        }
+        nextBranching++;
     }
 
-    return true;
+    return nextBranching - seqEnd - 1;
 }
