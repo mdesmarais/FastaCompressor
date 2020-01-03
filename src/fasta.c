@@ -60,12 +60,12 @@ bool compressFile(BloomFilter *bf, FILE *in, FILE *out, int k) {
     return true;
 }
 
-bool computeBranchings(BloomFilter *bf, Vector *v, char *seq, size_t len, int k) {
+bool computeBranchings(BloomFilter *bf, Vector *branchings, char *seq, size_t len, int k) {
     assert(bf);
-    assert(v);
+    assert(branchings);
     assert(seq);
 
-    if (k <= 0) {
+    if (k <= 0 || k > len) {
         return false;
     }
 
@@ -81,7 +81,7 @@ bool computeBranchings(BloomFilter *bf, Vector *v, char *seq, size_t len, int k)
         if (nbNeighbors == 0) {
             break;
         }
-        else if (nbNeighbors > 1 && !vectorPush(v, seq + i + k)) {
+        else if (nbNeighbors > 1 && !vectorPush(branchings, seq + i + k)) {
             log_error("vector push error");
             return false;
         }

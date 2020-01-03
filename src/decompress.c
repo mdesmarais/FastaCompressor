@@ -76,6 +76,8 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
+    // Objects that have to freed before
+    // the end of the program
     gzFile graphFp = NULL;
     FILE *inFp = NULL;
     FILE *outFp = NULL;
@@ -88,6 +90,7 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
+    log_info("Loading graph");
     if ((bf = loadDBG(graphFp)) == NULL) {
         log_error("Unable to load graph from %s", graphPath);
         goto EXIT;
@@ -95,6 +98,8 @@ int main(int argc, char **argv) {
 
     gzclose(graphFp);
     graphFp = NULL;
+
+    log_info("Done.");
 
     if ((inFp = fopen(inputFile, "r")) == NULL) {
         log_error("Unable to open %s", inputFile);
@@ -108,6 +113,7 @@ int main(int argc, char **argv) {
         goto EXIT;
     }
 
+    log_info("Decompressing file");
     if (!decompressFile(bf, inFp, outFp, 20)) {
         log_error("coup dur");
         goto EXIT;
