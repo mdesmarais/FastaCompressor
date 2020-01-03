@@ -20,20 +20,29 @@ void tearDown() {
     vectorDelete(g_vec);
 }
 
-/*void test_computeBranchings_Should_ReturnFalse_When_GivenNegativeK() {
+void test_computeBranchings() {
     g_bf = bfCreate(10000, 7);
     g_vec = vectorCreate(10, 1);
 
-    TEST_ASSERT_TRUE(bfAdd(g_bf, "CTGACG", 6));
-    TEST_ASSERT_TRUE(bfAdd(g_bf, "TGACGT", 6));
-    TEST_ASSERT_TRUE(bfAdd(g_bf, "GACGTG", 6));
-    TEST_ASSERT_TRUE(bfAdd(g_bf, "ACGTGG", 6));
-    TEST_ASSERT_TRUE(bfAdd(g_bf, "CGTGGA", 6));
+    char k1[] = "CTGACG";
+    char k2[] = "TGACGT";
+    char k3[] = "GACGTG";
+    char k4[] = "ACGTGG";
+    char k5[] = "CGTGGA";
+    char k6[] = "ACGTGT";
 
-    TEST_ASSERT_TRUE(computeBranchings(g_bf, g_vec, "CTGACGTGGA", 10, 6));
+    TEST_ASSERT_TRUE(insertKmer(g_bf, k1, 6));
+    TEST_ASSERT_TRUE(insertKmer(g_bf, k2, 6));
+    TEST_ASSERT_TRUE(insertKmer(g_bf, k3, 6));
+    TEST_ASSERT_TRUE(insertKmer(g_bf, k4, 6));
+    TEST_ASSERT_TRUE(insertKmer(g_bf, k5, 6));
+    TEST_ASSERT_TRUE(insertKmer(g_bf, k6, 6));
+
+    char seq[] = "CTGACGTGGA";
+    TEST_ASSERT_TRUE(computeBranchings(g_bf, g_vec, seq, 10, 6));
 
     TEST_ASSERT_EQUAL(1, vectorSize(g_vec));
-}*/
+}
 
 void test_decompressRead_Should_ReturnTrue_When_GivenValidCompressedRead() {
     g_bf = bfCreate(10000, 7);
@@ -109,7 +118,8 @@ void test_extractBranchings_Should_ReturnTwo_And_UpdateVector_When_GivenLineWith
 
 int main() {
     UNITY_BEGIN();
-    //RUN_TEST(test_computeBranchings_Should_ReturnFalse_When_GivenNegativeK);
+    RUN_TEST(test_computeBranchings);
+
     RUN_TEST(test_decompressRead_Should_ReturnTrue_When_GivenValidCompressedRead);
 
     RUN_TEST(test_extractBranchings_Should_ReturnZero_When_GivenLineWithoutBranchings);

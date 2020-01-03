@@ -45,7 +45,7 @@ bool createDBG(BloomFilter *bf, FILE *fp, int k) {
         }
 
         // Inserts each kmer into the filter
-        for (int64_t i = 0;i < length - k + 1;i++) {
+        for (int64_t i = 0;i < lineLength - k + 1;i++) {
             // Each kmer starts at position i and has
             // a length of k. 
             // The line must be greater than k

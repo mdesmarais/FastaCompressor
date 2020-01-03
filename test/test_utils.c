@@ -35,28 +35,22 @@ void test_findNeighbors_Should_ReturnNegativeValue_When_GivenLengthLessThanTwo()
 
 void test_findNeighbors_Should_ReturnZero_When_GivenEmptyFilter() {
     g_bf = bfCreate(100, 7);
-    char neighbors[4] = { '\0' };
+    char neighbors[5] = { '\0' };
 
     TEST_ASSERT_EQUAL(0, findNeighbors(g_bf, "ATCG", 4, neighbors));
 
-    TEST_ASSERT_EQUAL('\0', neighbors[0]);
-    TEST_ASSERT_EQUAL('\0', neighbors[1]);
-    TEST_ASSERT_EQUAL('\0', neighbors[2]);
-    TEST_ASSERT_EQUAL('\0', neighbors[3]);
+    TEST_ASSERT_EQUAL_STRING("", neighbors);
 }
 
 void test_findNeighbors_Should_ReturnOne_When_GivenFilterWithOneElement() {
     g_bf = bfCreate(100, 7);
-    char neighbors[4] = { '\0' };
+    char neighbors[5] = { '\0' };
 
     bfAdd(g_bf, "CCGA", 4);
 
     TEST_ASSERT_EQUAL(1, findNeighbors(g_bf, "ATCG", 4, neighbors));
 
-    TEST_ASSERT_EQUAL('G', neighbors[0]);
-    TEST_ASSERT_EQUAL('\0', neighbors[1]);
-    TEST_ASSERT_EQUAL('\0', neighbors[2]);
-    TEST_ASSERT_EQUAL('\0', neighbors[3]);
+    TEST_ASSERT_EQUAL_STRING("G", neighbors);
 }
 
 int main() {

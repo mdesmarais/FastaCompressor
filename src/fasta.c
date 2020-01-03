@@ -28,6 +28,7 @@ bool compressFile(BloomFilter *bf, FILE *in, FILE *out, int k) {
 
     char *line = NULL;
     size_t size = 0;
+    bool firstLine = true;
 
     ssize_t result;
     while ((result = getline(&line, &size, in)) > 0) {
@@ -39,19 +40,18 @@ bool compressFile(BloomFilter *bf, FILE *in, FILE *out, int k) {
             return false;
         }
 
+        if (firstLine) {
+            firstLine = false;
+            fprintf(out, "%ld\n", result - 1);
+        }
+
         vectorClear(v);
         if (!computeBranchings(bf, v, line, result, k)) {
             log_error("branchings computation error");
             break;
         }
 
-        char c = ' ';
-        fwrite(line, k, 1, out);
-        fwrite(&c, 1, 1, out);
-        fwrite(vectorRawValues(v), 1, v->size, out);
-
-        c = '\n';
-        fwrite(&c, 1, 1, out);
+        fprintf(out, "%.*s %.*s\n", k, line, (int) vectorSize(v), (char*) vectorRawValues(v));
     }
 
     free(line);
@@ -71,7 +71,7 @@ bool computeBranchings(BloomFilter *bf, Vector *v, char *seq, size_t len, int k)
 
     char neighbors[4];
 
-    for (size_t i = 0;i < len - k + 1;i++) {
+    for (size_t i = 0;i < len - k - 1;i++) {
         int nbNeighbors = findNeighbors(bf, seq + i, k, neighbors);
 
         if (nbNeighbors < 0) {
@@ -81,8 +81,9 @@ bool computeBranchings(BloomFilter *bf, Vector *v, char *seq, size_t len, int k)
         if (nbNeighbors == 0) {
             break;
         }
-        else if (nbNeighbors > 1) {
-            vectorPush(v, seq + i + k + 1);
+        else if (nbNeighbors > 1 && !vectorPush(v, seq + i + k)) {
+            log_error("vector push error");
+            return false;
         }
     }
 
@@ -125,7 +126,7 @@ bool decompressFile(BloomFilter *bf, FILE *in, FILE *out, int k) {
 
     log_debug("Read length : %d", readLength);
 
-    read = malloc(readLength + 2);
+    read = malloc(readLength + 1);
     branchings = vectorCreate(readLength - k, 1);
 
     if (!read) {
@@ -138,9 +139,9 @@ bool decompressFile(BloomFilter *bf, FILE *in, FILE *out, int k) {
         goto EXIT;
     }
 
-    read[readLength] = '\n';
-    read[readLength + 1] = '\0';
+    read[readLength] = '\0';
 
+    size_t readIndex = 0;
     while ((lineLength = getline(&line, &size, in)) > 0) {
         vectorClear(branchings);
 
@@ -150,12 +151,6 @@ bool decompressFile(BloomFilter *bf, FILE *in, FILE *out, int k) {
             goto EXIT;
         }
 
-        log_debug("nb branchings=%d", nbBranchings);
-
-        if (nbBranchings > 0) {
-            log_debug("First branching : %c", *((char*) vectorAt(branchings, 0)));
-        }
-
         // @TODO check that the read length equals k
 
         if (!decompressRead(bf, branchings, read, readLength, line, k)) {
@@ -163,7 +158,9 @@ bool decompressFile(BloomFilter *bf, FILE *in, FILE *out, int k) {
             goto EXIT;
         }
 
-        fwrite(read, readLength + 1, 1, out);
+        //fwrite(read, readLength + 1, 1, out);
+        fprintf(out, ">read %ld\n%s\n", readIndex, read);
+        readIndex++;
     }
 
     result = true;
@@ -205,23 +202,22 @@ bool decompressRead(BloomFilter *bf, Vector *branchings, char *read, int readLen
         int neighborIndex = -1;
 
         if (nbNeighbors > 1) {
-            log_debug("neighbors : %d for kmer %.*s", nbNeighbors, k, kmer);
-            char *pBranching = vectorAt(branchings, nextBranching);
+            char *pBranching = NULL;
 
-            if (!pBranching) {
-                log_error("Unable to get branching at index %d", nextBranching);
+            if ((pBranching = vectorAt(branchings, nextBranching)) == NULL) {
+                log_error("Unable to get branching at index %d, vector size=%ld", nextBranching, vectorSize(branchings));
                 goto EXIT;
             }
 
             // Checks if the current branching corresponds to one of the kmer neighbors
             for (int j = 0;j < nbNeighbors && neighborIndex == -1;j++) {
                 if (*pBranching == neighbors[j]) {
-                    neighborIndex = 0;
+                    neighborIndex = j;
                 }
             }
 
             if (neighborIndex == -1) {
-                log_error("Branching error, index=%ld", i);
+                log_error("Branching error, index=%ld\npartial read=%.*s\navailable neighbors : %.*s", i, i, read, nbNeighbors, neighbors);
                 return false;
             }
 
@@ -236,7 +232,7 @@ bool decompressRead(BloomFilter *bf, Vector *branchings, char *read, int readLen
         }
         else {
             // Error
-            log_error("Kmer without neighbors at %d", i);
+            log_error("Kmer without neighbors at %d, kmer=%.*s", i, k, firstKmer);
             goto EXIT;
         }
 

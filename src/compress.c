@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
     char graphOutputFile[255] = { '\0' };
 
     int kmerSize = 20;
-    int64_t bfSize = 10000000;
+    int64_t filterSize = 10000000;
     int bfHash = 7;
 
     int opt;
@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
                     return EXIT_FAILURE;
                 }
 
-                bfSize = value;
+                filterSize = value;
                 break;
             }
 
@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
     // Informs the user of paths and parameters that will be used
     log_info("Compressed fasta path : %s", outputFile);
     log_info("Graph path : %s", graphOutputFile);
-    log_info("Parameters : kmer-size=%d filter-size=%d filter-hash=%d", kmerSize, bfSize, bfHash);
+    log_info("Parameters : kmer-size=%d filter-size=%d filter-hash=%d", kmerSize, filterSize, bfHash);
 
     int resultStatus = EXIT_FAILURE;
 
@@ -144,7 +144,7 @@ int main(int argc, char **argv) {
     }
 
     // Creates a new Bloom Filter with default parameters
-    if ((bf = bfCreate(bfSize, bfHash)) == NULL) {
+    if ((bf = bfCreate(filterSize, bfHash)) == NULL) {
         log_error("Unable to create a new Bloom filter");
         goto EXIT;
     }

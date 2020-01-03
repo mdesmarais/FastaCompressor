@@ -1,6 +1,7 @@
 #include "utils.h"
 
 #include "bloom_filter.h"
+#include "log.h"
 #include "string_utils.h"
 
 #include <assert.h>
@@ -75,7 +76,11 @@ int findNeighbors(BloomFilter *bf, const char *kmer, size_t len, char *neighbors
         nextKmer[len - 1] = letters[i];
 
         // Computes the canonical form (nextKmer will be modified)
-        canonicalForm(nextKmer, len);
+        if (!canonicalForm(nextKmer, len)) {
+            free(nextKmer);
+            log_error("canonical form error");
+            return -1;
+        }
 
         if (bfContains(bf, nextKmer, len)) {
             // Adds the letter into the container if the current next kmer
