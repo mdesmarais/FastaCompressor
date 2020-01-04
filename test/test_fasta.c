@@ -55,7 +55,7 @@ void test_decompressRead_Should_ReturnTrue_When_GivenValidCompressedRead() {
     char seq2[] = "CGGGAAAAAATCGAGCCCTAATTATTT";
     char kmer[8];
 
-    for (int i = 0;i < strlen(seq1);i++) {
+    for (size_t i = 0;i < strlen(seq1);i++) {
         memcpy(kmer, seq1 + i, 8);
         TEST_ASSERT_TRUE(insertKmer(g_bf, kmer, 8));
 

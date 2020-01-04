@@ -4,8 +4,20 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/**
+ * \brief Converts a string to a signed byte number
+ * 
+ * @param input string that contains the number
+ * @return one byte nulber
+ */
 int8_t atoi8(const char *input);
 
+/**
+ * \brief Converts a string to a signed 8 bytes number
+ * 
+ * @param input string that contains the number
+ * @return 8 bytes number
+ */
 int64_t atoi64(const char *input);
 
 /**

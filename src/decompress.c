@@ -41,6 +41,7 @@ int main(int argc, char **argv) {
 
             case 'g':
                 strncpy(graphPath, optarg, 255);
+                break;
             
             case 'o':
                 strncpy(outputPath, optarg, 255);

@@ -89,7 +89,7 @@ bool insertKmer(struct BloomFilter *bf, char *kmer, int k) {
 BloomFilter *loadDBG(gzFile fp) {
     assert(fp);
 
-    z_size_t r;
+    int r;
     int64_t size = 0;
 
     if ((r = gzread(fp, &size, sizeof(size))) != sizeof(size)) {

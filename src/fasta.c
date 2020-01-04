@@ -60,18 +60,18 @@ bool compressFile(BloomFilter *bf, FILE *in, FILE *out, int k) {
     return true;
 }
 
-bool computeBranchings(BloomFilter *bf, Vector *branchings, char *seq, size_t len, int k) {
+bool computeBranchings(BloomFilter *bf, Vector *branchings, char *seq, int len, int k) {
     assert(bf);
     assert(branchings);
     assert(seq);
 
-    if (k <= 0 || k > len) {
+    if (len <= 0 || k <= 0 || k > len) {
         return false;
     }
 
     char neighbors[4];
 
-    for (size_t i = 0;i < len - k - 1;i++) {
+    for (int i = 0;i < len - k - 1;i++) {
         int nbNeighbors = findNeighbors(bf, seq + i, k, neighbors);
 
         if (nbNeighbors < 0) {
@@ -158,7 +158,6 @@ bool decompressFile(BloomFilter *bf, FILE *in, FILE *out, int k) {
             goto EXIT;
         }
 
-        //fwrite(read, readLength + 1, 1, out);
         fprintf(out, ">read %ld\n%s\n", readIndex, read);
         readIndex++;
     }
@@ -209,9 +208,11 @@ bool decompressRead(BloomFilter *bf, Vector *branchings, char *read, int readLen
                 goto EXIT;
             }
 
+            char branchingValue = *pBranching;
+
             // Checks if the current branching corresponds to one of the kmer neighbors
             for (int j = 0;j < nbNeighbors && neighborIndex == -1;j++) {
-                if (*pBranching == neighbors[j]) {
+                if (branchingValue == neighbors[j]) {
                     neighborIndex = j;
                 }
             }
@@ -236,7 +237,10 @@ bool decompressRead(BloomFilter *bf, Vector *branchings, char *read, int readLen
             goto EXIT;
         }
 
+        // Moves kmer to the left, its first letter will be lost
         memcpy(kmer, kmer + 1, k - 1);
+
+        // replaces the last letter by the neighbor
         kmer[k - 1] = neighbors[neighborIndex];
         read[i + k] = neighbors[neighborIndex];
     }
@@ -253,13 +257,15 @@ int extractBranchings(Vector *branchings, const char *line) {
     assert(branchings);
     assert(line);
 
-    char *seqEnd = strchr(line, ' ');
+    // A compressed read is represented by its first kmer, a space
+    // and may be by some branchings.
+    char *kmerEnd = strchr(line, ' ');
 
-    if (!seqEnd) {
+    if (!kmerEnd) {
         return 0;
     }
 
-    char *nextBranching = seqEnd + 1;
+    char *nextBranching = kmerEnd + 1;
     while (*nextBranching != '\0' && *nextBranching != '\n') {
         if (!vectorPush(branchings, nextBranching)) {
             log_error("Unable to push a new branching into the vector");
@@ -269,5 +275,5 @@ int extractBranchings(Vector *branchings, const char *line) {
         nextBranching++;
     }
 
-    return nextBranching - seqEnd - 1;
+    return nextBranching - kmerEnd - 1;
 }

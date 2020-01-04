@@ -55,10 +55,37 @@ bool compressFile(struct BloomFilter *bf, FILE *in, FILE *out, int k);
  * @param k length of each kmer
  * @return true if no error occured, otherwise false
  */
-bool computeBranchings(struct BloomFilter *bf, struct Vector *branchings, char *seq, size_t len, int k);
+bool computeBranchings(struct BloomFilter *bf, struct Vector *branchings, char *seq, int len, int k);
+
+/**
+ * \brief Decompresses reads into the output file
+ * 
+ * The first line of the input file must be the length of each reads.
+ * They must have the same length.
+ * 
+ * @param bf a pointer to a Bloom filter structure
+ * @param in pointer to an input file
+ * @param out pointer to an output file
+ * @param k length of each kmer
+ */
 bool decompressFile(struct BloomFilter *bf, FILE *in, FILE *out, int k);
 bool decompressRead(struct BloomFilter *bf, struct Vector *branchings, char *read, int readLength, const char *firstKmer, int k);
 
+/**
+ * \brief Extracts branchings from a compressed read
+ * 
+ * A compressed read is represented by its firt kmer, a space
+ * and may be by some branchings.
+ * This function looks for those branchings after the space and
+ * adds them into the given vector.
+ * 
+ * If the compressed read is not valid or an error occured
+ * then a negative value will be returned.
+ * 
+ * @param branchings a pointer to a vector structure
+ * @param line compressed read
+ * @return number of branchings found or a negative value in an error occured
+ */
 int extractBranchings(struct Vector *branchings, const char *line);
 
 #endif // FASTA_H

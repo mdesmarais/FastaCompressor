@@ -20,7 +20,7 @@ static int64_t getPositionFromHash(uint32_t *hash, size_t len, int64_t n) {
 
     int64_t pos = 0;
 
-    for (int64_t i = 0;i < len;i++) {
+    for (size_t i = 0;i < len;i++) {
         pos = (pos + hash[i]) % n;
     }
 

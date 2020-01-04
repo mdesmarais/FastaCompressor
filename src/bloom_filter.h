@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 typedef struct BloomFilter {
-    int8_t *data;
+    char *data;
     int64_t size;
     int8_t nbhashs;
 } BloomFilter;

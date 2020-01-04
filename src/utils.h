@@ -21,8 +21,6 @@ struct BloomFilter;
  */
 char *canonicalForm(char *kmer, size_t len);
 
-const char *gzFileError(gzFile fp);
-
 /**
  * \brief Finds neighbors of the given kmer that are in the bloom filter
  * 
@@ -39,5 +37,16 @@ const char *gzFileError(gzFile fp);
  * @return number of neighbors found if the Bloom Filter or a negative value in case of an error
  */
 int findNeighbors(struct BloomFilter *bf, const char *kmer, size_t len, char *neighbors);
+
+/**
+ * \brief Returns the error message associated to the given gzip file
+ * 
+ * If the error code for this file is Z_ERRNO then the result of
+ * strerror (non gzip error) will be returned.
+ * 
+ * @param fp file that has an error code
+ * @return message associated to this error
+ */
+const char *gzFileError(gzFile fp);
 
 #endif // UTILS_H
