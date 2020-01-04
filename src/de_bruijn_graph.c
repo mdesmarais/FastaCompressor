@@ -90,9 +90,9 @@ BloomFilter *loadDBG(gzFile fp) {
     assert(fp);
 
     int r;
-    int64_t size = 0;
+    long size = 0;
 
-    if ((r = gzread(fp, &size, sizeof(size))) != sizeof(size)) {
+    if ((r = gzread(fp, &size, 4)) != 4) {
         if (r != -1) {
             log_error("Unable to read the size of the graph : %s", gzFileError(fp));
         }
@@ -113,21 +113,21 @@ BloomFilter *loadDBG(gzFile fp) {
         return NULL;
     }
 
-    int8_t *bits = malloc(sizeof(*bits) * size);
+    int8_t *bytes = malloc(sizeof(*bytes) * size);
 
-    if (!bits) {
+    if (!bytes) {
         log_error("Unable to allocate a buffer of size %I64d", size);
         return NULL;
     }
 
-    if ((r = gzread(fp, bits, size)) != size) {
+    if ((r = gzread(fp, bytes, size)) != size) {
         if (r != -1) {
             log_error("Unable to read the content of the Bloom filter : %s", gzFileError(fp));
         }
         else {
             log_error("content error");
         }
-        free(bits);
+        free(bytes);
         return NULL;
     }
 
@@ -135,13 +135,13 @@ BloomFilter *loadDBG(gzFile fp) {
 
     if (!bf) {
         log_error("Unable to create a new Bloom filter");
-        free(bits);
+        free(bytes);
         return NULL;
     }
 
-    bfFill(bf, bits);
+    bfFill(bf, bytes);
 
-    free(bits);
+    free(bytes);
     return bf;
 }
 
@@ -151,17 +151,19 @@ bool saveDBG(BloomFilter *bf, gzFile fp) {
 
     // @TODO check endianness
 
-    if (gzwrite(fp, &bf->size, sizeof(bf->size)) <= 0) {
+    long filterSize = bfSize(bf);
+    if (gzwrite(fp, &filterSize, 4) <= 0) {
         log_error("Unable to write filter size : %s", gzFileError(fp));
         return false;
     }
 
-    if (gzwrite(fp, &bf->nbhashs, sizeof(bf->nbhashs)) <= 0) {
+    long filterHashs = bfNbHashs(bf);
+    if (gzwrite(fp, &filterHashs, 1) <= 0) {
         log_error("Unable to write filter nbHashs : %s", gzFileError(fp));
         return false;
     }
 
-    if (gzwrite(fp, bf->data, sizeof(*bf->data) * bf->size) < bf->size) {
+    if (gzwrite(fp, bf->data, filterSize) < bf->size) {
         log_error("Unable to write filter content : %s", gzFileError(fp));
         return false;
     }

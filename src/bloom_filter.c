@@ -15,10 +15,10 @@ static char *getByte(BloomFilter *bf, int64_t i) {
     return &bf->data[i];
 }
 
-static int64_t getPositionFromHash(uint32_t *hash, size_t len, int64_t n) {
+static long getPositionFromHash(uint32_t *hash, size_t len, long n) {
     assert(hash);
 
-    int64_t pos = 0;
+    long pos = 0;
 
     for (size_t i = 0;i < len;i++) {
         pos = (pos + hash[i]) % n;
@@ -27,7 +27,7 @@ static int64_t getPositionFromHash(uint32_t *hash, size_t len, int64_t n) {
     return pos;
 }
 
-BloomFilter *bfCreate(int64_t n, int8_t k) {
+BloomFilter *bfCreate(long n, int8_t k) {
     if (k <= 0) {
         return NULL;
     }
@@ -67,7 +67,7 @@ void bfFill(BloomFilter *bf, int8_t *bits) {
     memcpy(bf->data, bits, bfSize(bf));
 }
 
-char bfGetBit(BloomFilter *bf, int64_t i, int *pError) {
+char bfGetBit(BloomFilter *bf, long long i, int *pError) {
     assert(bf);
 
     if (i >= bfSize(bf)) {
@@ -78,8 +78,8 @@ char bfGetBit(BloomFilter *bf, int64_t i, int *pError) {
         return 0;
     }
 
-    int64_t offset = i / 8;
-    int64_t position = i % 8;
+    long offset = i / 8;
+    long position = i % 8;
 
     if (pError) {
         *pError = 0;
@@ -89,18 +89,18 @@ char bfGetBit(BloomFilter *bf, int64_t i, int *pError) {
     return (*byte >> position) & 0x1;
 }
 
-bool bfSetBit(BloomFilter *bf, int64_t i) {
+bool bfSetBit(BloomFilter *bf, long long i) {
     assert(bf);
 
     if (i >= bfSize(bf)) {
         return false;
     }
 
-    int64_t offset = i / 8;
-    int64_t position = i % 8;
+    long offset = i / 8;
+    long position = i % 8;
 
     char *byte = getByte(bf, offset);
-    int64_t mask = 1 << position;
+    long mask = 1 << position;
 
     *byte = *byte | mask;
 
@@ -115,14 +115,14 @@ bool bfAdd(BloomFilter *bf, void *value, int len) {
         return false;
     }
 
-    int64_t size = bfSize(bf);
+    long size = bfSize(bf);
     int nbHashs = bfNbHashs(bf);
     uint32_t hash[4];
 
     for (int i = 0;i < nbHashs;i++) {
         MurmurHash3_x64_128(value, len, i, hash);
 
-        int64_t pos = getPositionFromHash(hash, 4, size);
+        long pos = getPositionFromHash(hash, 4, size);
 
         if (!bfSetBit(bf, pos)) {
             return false;
@@ -140,7 +140,7 @@ bool bfContains(BloomFilter *bf, void *value, int len) {
         return false;
     }
 
-    size_t size = bfSize(bf);
+    long size = bfSize(bf);
     int nbHashs = bfNbHashs(bf);
     uint32_t hash[4];
     int error;
@@ -148,7 +148,7 @@ bool bfContains(BloomFilter *bf, void *value, int len) {
     for (int i = 0;i < nbHashs;i++) {
         MurmurHash3_x64_128(value, len, i, hash);
 
-        size_t pos = getPositionFromHash(hash, 4, size);
+        long pos = getPositionFromHash(hash, 4, size);
 
         char b = bfGetBit(bf, pos, &error);
 
@@ -163,16 +163,4 @@ bool bfContains(BloomFilter *bf, void *value, int len) {
     }
 
     return true;
-}
-
-int64_t bfSize(const BloomFilter *bf) {
-    assert(bf);
-
-    return bf->size;
-}
-
-int bfNbHashs(const BloomFilter *bf) {
-    assert(bf);
-
-    return bf->nbhashs;
 }
