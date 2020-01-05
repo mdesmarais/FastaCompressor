@@ -23,7 +23,7 @@ void test_bfCreate_Should_ReturnValidFilter() {
     TEST_ASSERT_EQUAL(8, bfSize(g_bf));
     TEST_ASSERT_EQUAL(3, bfNbHashs(g_bf));
 
-    for (size_t i = 0;i < 8;i++) {
+    for (size_t i = 0;i < bfBitSize(g_bf);i++) {
         TEST_ASSERT_EQUAL(0, bfGetBit(g_bf, i, NULL));
     }
 }
@@ -32,7 +32,8 @@ void test_bfGetBit_Should_ReturnError_When_GivenIndexOutOfBounds() {
     g_bf = bfCreate(8, 3);
 
     int error = 0;
-    bfGetBit(g_bf, 9, &error);
+    // The filter has 8 bytes, so the 64th bit does not exist
+    bfGetBit(g_bf, 64, &error);
 
     TEST_ASSERT_NOT_EQUAL(0, error);
 }
@@ -40,18 +41,18 @@ void test_bfGetBit_Should_ReturnError_When_GivenIndexOutOfBounds() {
 void test_bfSetBit_Should_ReturnFalse_When_GivenIndexOutOfBounds() {
     g_bf = bfCreate(8, 3);
 
-    TEST_ASSERT_EQUAL(false, bfSetBit(g_bf, 9));
+    TEST_ASSERT_EQUAL(false, bfSetBit(g_bf, 64));
 }
 
 void test_bfGetBit_bfSetBit() {
-    g_bf = bfCreate(9, 3);
+    g_bf = bfCreate(2, 3);
 
     TEST_ASSERT_EQUAL(true, bfSetBit(g_bf, 1));
     TEST_ASSERT_EQUAL(true, bfSetBit(g_bf, 8));
 
     int error = 0;
 
-    for (size_t i = 0;i < 9;i++) {
+    for (size_t i = 0;i < bfBitSize(g_bf);i++) {
         if (i == 1 || i == 8) {
             TEST_ASSERT_EQUAL(1, bfGetBit(g_bf, i, &error));
         }
@@ -70,7 +71,7 @@ void test_bfAdd_Should_UpdateAtLeastOneBitMaxNbHashs() {
 
     int updatedBits = 0;
 
-    for (size_t i = 0;i < 8;i++) {
+    for (size_t i = 0;i < bfBitSize(g_bf);i++) {
         if (bfGetBit(g_bf, i, NULL)) {
             updatedBits++;
         }
@@ -106,10 +107,14 @@ int main() {
     UNITY_BEGIN();
     RUN_TEST(test_bfCreate_Should_ReturnNull_When_GivenNegativeK);
     RUN_TEST(test_bfCreate_Should_ReturnValidFilter);
+
     RUN_TEST(test_bfGetBit_Should_ReturnError_When_GivenIndexOutOfBounds);
     RUN_TEST(test_bfSetBit_Should_ReturnFalse_When_GivenIndexOutOfBounds);
+
     RUN_TEST(test_bfGetBit_bfSetBit);
+
     RUN_TEST(test_bfAdd_Should_UpdateAtLeastOneBitMaxNbHashs);
+
     RUN_TEST(test_bfContains_Should_ReturnFalse_When_GivenEmptyFilter);
     RUN_TEST(test_bfContains_Should_ReturnFalse_When_GivenUnknownHash);
     RUN_TEST(test_bfContains_Should_ReturnTrue_When_GivenExistingHash);
