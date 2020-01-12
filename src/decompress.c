@@ -133,6 +133,10 @@ EXIT:
     if (inFp) {
         fclose(inFp);
     }
+
+    if (outFp) {
+        fclose(outFp);
+    }
     bfDelete(bf);
 
     return result;
