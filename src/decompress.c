@@ -9,6 +9,7 @@
 
 #include "bloom_filter.h"
 #include "de_bruijn_graph.h"
+#include "decompress_thread.h"
 #include "fasta.h"
 #include "log.h"
 #include "string_utils.h"
@@ -115,8 +116,8 @@ int main(int argc, char **argv) {
     }
 
     log_info("Decompressing file");
-    if (!decompressFile(bf, inFp, outFp, 20)) {
-        log_error("coup dur");
+    if (!decompressFileThreads(bf, inFp, outFp, 20)) {
+        log_error("Decompression error");
         goto EXIT;
     }
 

@@ -10,5 +10,7 @@ set_target_properties(libfasta PROPERTIES ARCHIVE_OUTPUT_NAME "${PREFIX}fasta${S
 add_executable(fasta_compress compress.c)
 target_link_libraries(fasta_compress libfasta ZLIB::ZLIB)
 
-add_executable(fasta_decompress decompress.c)
-target_link_libraries(fasta_decompress libfasta ZLIB::ZLIB)
+find_package(Threads REQUIRED)
+
+add_executable(fasta_decompress decompress.c decompress_thread.c)
+target_link_libraries(fasta_decompress libfasta ZLIB::ZLIB Threads::Threads)

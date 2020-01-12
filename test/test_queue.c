@@ -67,12 +67,37 @@ void test_queueClear_Should_MakeQueueEmpty() {
     TEST_ASSERT_TRUE(queueEmpty(g_queue));
 }
 
+void test_queue() {
+    g_queue = queueCreate(10, 1);
+    TEST_ASSERT_NOT_NULL(g_queue);
+
+    char vals[] = { 'A', 'B', 'C' };
+    TEST_ASSERT_TRUE(queuePush(g_queue, vals));
+    TEST_ASSERT_TRUE(queuePush(g_queue, vals + 1));
+    TEST_ASSERT_TRUE(queuePush(g_queue, vals + 2));
+
+    char results[3] = { '\0' };
+    TEST_ASSERT_TRUE(queuePop(g_queue, results));
+    TEST_ASSERT_EQUAL('A', results[0]);
+
+    TEST_ASSERT_TRUE(queuePop(g_queue, results + 1));
+    TEST_ASSERT_EQUAL('B', results[1]);
+
+    TEST_ASSERT_TRUE(queuePop(g_queue, results + 2));
+    TEST_ASSERT_EQUAL('C', results[2]);
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_queueCreate_Should_ReturnValidPointer);
+
     RUN_TEST(test_queuePush_Should_MakeQueueNonEmpty);
     RUN_TEST(test_queuePush_Should_MakeQueueFullAndEmpty_When_GivenOneSizeQueue);
+
     RUN_TEST(test_queuePop_Should_MakeQueueEmpty_When_GivenQueueWithOneElement);
+
     RUN_TEST(test_queueClear_Should_MakeQueueEmpty);
+
+    RUN_TEST(test_queue);
     return UNITY_END();
 }

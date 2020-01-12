@@ -11,10 +11,14 @@ typedef struct Queue {
     size_t head;
     size_t tail;
     bool full;
+    int emptyWaiters;
+    int fullWaiters;
     pthread_mutex_t lock;
     pthread_cond_t elemAvailable;
+    pthread_cond_t slotAvailable;
 } Queue;
 
+// Those two functions are not thread safe !
 #define queueEmpty(queue) (!(queue)->full && (queue)->head == (queue)->tail)
 #define queueFull(queue) ((queue)->full)
 
