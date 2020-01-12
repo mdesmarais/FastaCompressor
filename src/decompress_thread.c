@@ -13,6 +13,25 @@
 #include <string.h>
 #include <pthread.h>
 
+typedef struct ThreadArgs {
+    struct BloomFilter *bf;
+    FILE *out;
+    Queue *workQueue;
+    Queue *outQueue;
+    int kmerLength;
+    int readLength;
+} ThreadArgs;
+
+typedef struct CompressedRead {
+    long id;
+    char *read;
+} CompressedRead;
+
+typedef struct DecompressedRead {
+    long id;
+    char *read;
+} DecompressedRead;
+
 /**
  * \brief Decompresses reads from a work queue
  * 
@@ -33,59 +52,63 @@ static void *decompressionWorker(void *voidArgs) {
         return NULL;
     }
 
-    char *buffer = NULL;
-    char *read = NULL;
+    int readLength = args->readLength;
 
-    buffer = malloc(args->workQueue->elemSize);
-
-    if (!buffer) {
-        log_error("Unable to allocate a new buffer of size %ld", args->workQueue->elemSize);
-        goto EXIT;
-    }
-
-    read = malloc(args->readLength);
-
-    if (!read) {
-        log_error("Unable to allocate a new buffer of size %d", args->readLength);
-        goto EXIT;
-    }
+    CompressedRead cr;
+    DecompressedRead dr;
+    Queue *queue = args->workQueue;
 
     while (true) {
         vectorClear(branchings);
 
-        if (!queuePop(args->workQueue, buffer)) {
+        if (!queuePop(queue, &cr)) {
             log_error("Unable to pop an element from the work queue");
             goto EXIT;
         }
 
         // Delimiter that indicates the end of the thread
-        if (*buffer == '\0') {
-            queuePush(args->workQueue, buffer);
+        if (cr.id == -1) {
+            queuePush(queue, &cr);
+            log_debug("Stop worker at %ld", cr.id);
             break;
         }
 
         int nbBranchings;
-        if ((nbBranchings = extractBranchings(branchings, buffer)) < 0) {
+        if ((nbBranchings = extractBranchings(branchings, cr.read)) < 0) {
             log_error("Unable to extract branchings");
             goto EXIT;
         }
 
-        if (!decompressRead(args->bf, branchings, read, args->readLength, buffer, args->kmerLength)) {
+        dr.id = cr.id;
+        dr.read = malloc(sizeof(*dr.read) * (readLength + 1));
+
+        if (!dr.read) {
+            log_error("Unable to allocate a buffer of length %d", readLength);
+            break;
+        }
+
+        dr.read[readLength] = '\0';
+        if (!decompressRead(args->bf, branchings, dr.read, readLength, cr.read, args->kmerLength)) {
             log_error("Unable to decompress a read");
             goto EXIT;
         }
 
         // Inserts the decompressed read into the
         // output queue
-        if (!queuePush(args->outQueue, read)) {
+        if (!queuePush(args->outQueue, &dr)) {
             log_error("Unable to push a read into the out queue");
             goto EXIT;
         }
+
+        free(cr.read);
+        cr.read = NULL;
+
+        dr.read = NULL;
     }
 
 EXIT:
-    free(buffer);
-    free(read);
+    free(cr.read);
+    free(dr.read);
     vectorDelete(branchings);
 
     return NULL;
@@ -108,29 +131,28 @@ static void *outputWorker(void *voidArgs) {
     Queue *queue = args->outQueue;
     int readLength = args->readLength;
 
-    char *buffer = malloc(queue->elemSize + 1);
-    buffer[queue->elemSize] = '\0';
-
-    long readIndex = 1;
+    DecompressedRead dc;
+    dc.read = NULL;
 
     while (true) {
-        if (!queuePop(queue, buffer)) {
+        if (!queuePop(queue, &dc)) {
             log_error("Queue pop error");
             break;
         }
 
         // Delimiter that indicates the end of the thread
-        if (*buffer == '\0') {
-            log_error("output worker Stop at %ld", readIndex);
+        if (dc.id == -1) {
+            log_debug("output worker Stop at %ld", dc.id);
             break;
         }
 
-        fprintf(args->out, ">read %ld\n%s\n", readIndex, buffer);
+        fprintf(args->out, ">read %ld\n%s\n", dc.id, dc.read);
 
-        readIndex++;
+        free(dc.read);
+        dc.read = NULL;
     }
 
-    free(buffer);
+    free(dc.read);
 
     return voidArgs;
 }
@@ -158,10 +180,11 @@ bool decompressFileThreads(BloomFilter *bf, FILE *in, FILE *out, int k) {
     while ((c = getc(in)) != EOF && c != '\n') { }
 
     // A compressed read follows this format : "first_kmer branchings"
+    // Stores a space and a null character
     size_t lineSize = readLength * 2 + 2;
     
     // Queue for storing compressed reads from the main thread
-    Queue *workQueue = queueCreate(800, lineSize);
+    Queue *workQueue = queueCreate(800, sizeof(CompressedRead));
 
     if (!workQueue) {
         log_error("Unable to create a new work queue");
@@ -169,7 +192,7 @@ bool decompressFileThreads(BloomFilter *bf, FILE *in, FILE *out, int k) {
     }
 
     // Queue for storing decompressed reads from workers
-    Queue *outQueue = queueCreate(400, readLength);
+    Queue *outQueue = queueCreate(400, sizeof(DecompressedRead));
 
     if (!outQueue) {
         log_error("Unable to create a new out queue");
@@ -187,74 +210,91 @@ bool decompressFileThreads(BloomFilter *bf, FILE *in, FILE *out, int k) {
     args.workQueue = workQueue;
 
     // @TODO should be a function parameter
-    int nbthreads = 4;
-    pthread_t threads[nbthreads];
+    int nbThreads = 4;
+    pthread_t threads[nbThreads];
+    bool stoppedThreads[nbThreads];
 
-    // Holds a line from the input file (a compressed read)
-    char *line = NULL;
+    CompressedRead cr;
+    cr.read = NULL;
 
     // decompressFileThreads result
     bool result = false;
 
-    // Creates file writer thread
-    if (pthread_create(threads, NULL, outputWorker, &args) != 0) {
-        log_error("Thread creation error");
-        goto EXIT;
-    }
-
     // Creates decompression threads
-    for (int i = 1;i < nbthreads;i++) {
-        if (pthread_create(threads + i, NULL, decompressionWorker, &args) != 0) {
+    for (int i = 0;i < nbThreads;i++) {
+        void *(*target)(void*) = (i == 0) ? outputWorker : decompressionWorker;
+
+        if (pthread_create(threads + i, NULL, target, &args) != 0) {
             log_error("Thread creation error");
             goto EXIT;
         }
     }
 
-    line = malloc(lineSize);
-
-    if (!line) {
-        log_error("Unable to allocate a buffer of size %ld", lineSize);
-        goto EXIT;
-    }
-
     // Input file reading
-    while (fgets(line, lineSize, in) != NULL) {
-        if (!queuePush(workQueue, line)) {
+    cr.id = 0;
+    while (true) {
+        cr.read = malloc(lineSize);
+
+        if (!cr.read) {
+            log_error("Unable to allocate a buffer of size %ld", lineSize);
+            goto EXIT;
+        }
+
+        if (!fgets(cr.read, lineSize, in)) {
+            break;
+        }
+        
+        int c = *cr.read;
+
+        if (c == ' ' || c == '\0' || c == '\n') {
+            break;
+        }
+
+        if (!queuePush(workQueue, &cr)) {
             log_error("Queue push error");
             goto EXIT;
         }
+
+        cr.id++;
+        cr.read = NULL;
     }
+
+    free(cr.read);
 
     if (!feof(in)) {
         log_error("File error : %s", strerror(errno));
-        goto EXIT;
     }
 
     // Inserts a marker into the work queue in order to
     // inform threads that there is no more in coming reads
-    *line = '\0';
-    if (!queuePush(workQueue, line)) {
+    cr.id = -1;
+    cr.read = NULL;
+    if (!queuePush(workQueue, &cr)) {
         log_error("Delimiter push error");
     }
 
     // Waits for the workers
-    for (int i = 1;i < nbthreads;i++) {
+    for (int i = 1;i < nbThreads;i++) {
         pthread_join(threads[i], NULL);
+        stoppedThreads[i] = true;
     }
 
     // Inserts a marker into the output queue in order to
     // inform the first thread that there is no more in coming lines
-    *line = '\0';
-    queuePush(outQueue, line);
-    pthread_join(threads[0], NULL);
+    DecompressedRead dr;
+    dr.id = -1;
+    dr.read = NULL;
+    queuePush(outQueue, &dr);
 
     result = true;
 
 EXIT:
-    free(line);
+    free(cr.read);
     
-    for (int i = 0;i < nbthreads;i++) {
-        pthread_join(threads[i], NULL);
+    for (int i = 0;i < nbThreads;i++) {
+        if (!stoppedThreads[i]) {
+            pthread_join(threads[i], NULL);
+        }
     }
 
     queueDelete(workQueue);
